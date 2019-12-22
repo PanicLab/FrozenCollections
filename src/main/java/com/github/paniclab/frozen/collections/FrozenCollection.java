@@ -6,7 +6,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 
 
@@ -14,7 +13,6 @@ public final class FrozenCollection<E> implements Frozen<E>, Collection<E> {
     private static final String UNSUPPORTED_OPERATION_EXCEPTION_MESSAGE =
             "This operation is not supported for this class.";
     private static final Class<? extends Collection> DEFAULT_CONSTANT_CONTAINER_TYPE = HashSet.class;
-    //private static final Class<?>[] DEFAULT_CONSTANT_CONTAINER_CONSTRUCTOR_PARAM_TYPES = {int.class, float.class};
 
     private final int SIZE;
     private final Object ITERATIVE_CONTAINER;
@@ -47,16 +45,16 @@ public final class FrozenCollection<E> implements Frozen<E>, Collection<E> {
     }
 
     private Collection<E> createDefaultConstantTimeContainer(Collection<E> elements) {
-        return createCollectionContainer(DEFAULT_CONSTANT_CONTAINER_TYPE, elements);
+        return createEmptyCollectionContainer(DEFAULT_CONSTANT_CONTAINER_TYPE, elements);
     }
 
 
-    private <U extends Collection> Collection<E> createCollectionContainer(
+    private <U extends Collection> Collection<E> createEmptyCollectionContainer(
             Class<U> containerType,
             Collection<E> elements) {
 
         Collection<E> container;
-        container = tryOptimizedToHashTable(containerType, elements);
+        container = tryOptimizedHashTableConstructor(containerType, elements);
         if(container == null) {
             container = tryInitialCapacityBased(containerType, elements);
         }
@@ -64,7 +62,7 @@ public final class FrozenCollection<E> implements Frozen<E>, Collection<E> {
             container = tryArrayBased(containerType, elements);
         }
         if(container == null) {
-            container = Optional.ofNullable(tryMandatoryConstructor(containerType))
+            container = Optional.ofNullable(tryMandatoryNoArgConstructor(containerType))
                                 .orElseThrow(() -> new FrozenCollectionException("Cannot create instance."));
         }
 
@@ -72,7 +70,7 @@ public final class FrozenCollection<E> implements Frozen<E>, Collection<E> {
     }
 
     @Nullable
-    private <U extends Collection> Collection<E> tryOptimizedToHashTable(Class<U> collectionType, Collection<E> elements) {
+    private <U extends Collection> Collection<E> tryOptimizedHashTableConstructor(Class<U> collectionType, Collection<E> elements) {
         Class<?>[] optimizedParams = {int.class, float.class};
         U instance = null;
 
@@ -118,7 +116,7 @@ public final class FrozenCollection<E> implements Frozen<E>, Collection<E> {
     }
 
     @Nullable
-    private <U extends Collection> Collection<E> tryMandatoryConstructor(Class<U> collectionType) {
+    private <U extends Collection> Collection<E> tryMandatoryNoArgConstructor(Class<U> collectionType) {
         U instance = null;
         try {
             instance = FrozenCollections.getBrandNewInstance(collectionType);
